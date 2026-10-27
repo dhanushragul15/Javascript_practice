@@ -1,12 +1,9 @@
-//  Let imagine am E-commerce website with 4 types of users.
-// Let's do the OOP design for the same.
-
-// This enforces usage of modern JS
-// "use strict"; -> for strict mode
+// Let's imagine an E-commerce website with 4 types of users.
+// Lets do the OOP design for the same.
 
 // CONSTANTS
 
-const ROLE =  Object.freeze({
+const ROLE = Object.freeze({
     CUSTOMER: "CUSTOMER",
     SELLER: "SELLER",
     ADMIN: "ADMIN",
@@ -24,10 +21,10 @@ const PERMISSION = Object.freeze({
     ORDER_CREATE: "ORDER_CREATE",
     ORDER_READ_OWN: "ORDER_READ_OWN",
     ORDER_READ_ANY: "ORDER_READ_ANY",
-    SALES_READ_OWN: "SALES_READ_OWN",
+    SALES_READ_OWN: "SALES_READ_OWN"
 });
 
-// RBAC -> Role Based Access Control
+// RBAC - Role Based Access Control
 const ROLE_PERMISSIONS = Object.freeze({
     [ROLE.CUSTOMER]: [
         PERMISSION.PRODUCT_READ,
@@ -46,48 +43,112 @@ const ROLE_PERMISSIONS = Object.freeze({
     ],
     [ROLE.SUPPORT]: [
         PERMISSION.PRODUCT_READ,
-        PERMISSION.ORDER_READ_ANY,
-    ]
+        PERMISSION.ORDER_READ_ANY
+    ],
 })
 
-// Custom error:
+// Custom errors:
 
 class AppError extends Error {
-    constructor(message, statusCode) {
+    constructor(message) {
         super(message);
         this.name = this.constructor.name;
     }
 }
 
-class ValidationError extends AppError {}
-class AuthorizationError extends AppError {}
-class NotFoundError extends AppError {}
-class InsufficientError extends AppError {}
+class ValidationError extends AppError { }
+class AuthorizationError extends AppError { }
+class NotFoundError extends AppError { }
+class InsufficientError extends AppError { }
 
-// Authorization Srevice - RBAC checks
+
+// Authorization Service - RBAC checks
 
 class AuthorizationService {
-    // static method for checking premissionof given user
-    static hasPrermission(user, permission) {
-        if (!user instanceof user) {
+    // static method for checking permissions of given user
+    static hasPermission(user, permission) {
+        if (!(user instanceof User)) {
             return false;
         }
 
-        const prermissions = ROLE_PERMISSIONS[user.role];
-        return prermissions?.includes(permission) ?? false;
+        const permissions = ROLE_PERMISSIONS[user.role];
+        return permissions?.includes(permission) ?? false;
     }
 
+    // static method to help declare when certain features requires certain permission
     static requirePermission(user, permission) {
-        if (this.hasPrermission(user, permission)) {
+        if (!this.hasPermission(user, permission)) {
             throw new AuthorizationError(
-                `${permission} denied for role ${user.role ?? "UNKNOWN"}` 
+                `${permission} denied for role ${user.role ?? "UNKNOWN"}`
             );
         }
     }
-    staticrequireOwnerOrPermission(user,OwnerID, resourceOwnerId, anypermission) {
-        if (user.id == OwnerId && !this.hasPrermission(user, ownPermission)) {return; }
-        this.requirePermission(user, anyPermission); 
+    // Requiring either the owner or someone having higher authority(like admin)
+    static requireOwnerOrPermission(user, ownerId, ownPermission, anyPermission) {
+        if (user.id === ownerId && this.hasPermission(user, ownPermission)) { return; }
+        this.requirePermission(user, anyPermission);
     }
 }
 // Abstract User
 
+class User{
+    // Datafields
+    #id;
+    #name;
+    #email;
+    #role;
+    #active;
+
+    constructor({id, name, email, role}){
+        // This User class is Abstract. This must not be used for creating actual users.
+        if (new.target === User){
+            throw new Error("User is an abstract class")
+        }
+        if (!id || !name || !email || !role ){
+            throw new ValidationError("All user fields must be filled.")
+        }
+        if (!Object.hasOwn(ROLE_PERMISSIONS, role)){
+            throw new ValidationError(`Invalid role : ${role}`);
+        }
+
+        this.#id = id;
+        this.#name = name;
+        this.#email = email;
+        this.#role = role;
+        this.#active = true;
+    }
+
+    // getter methods for attributes
+    get id(){
+        return this.#id;
+    }
+    get name(){
+        return this.#name;
+    }
+    get email(){
+        return this.#email;
+    }
+    get role(){
+        return this.#role;
+    }
+    get isActive(){
+        return this.#active;
+    }
+    deactivate(){
+        this.#active = false;
+    }
+
+}
+class PrimeUser extends User{};
+const u1 = new PrimeUser({
+    id: 1,
+    name : "molli",
+    email :"molli@gmail.com",
+    role: ROLE.ADMIN
+});
+console.log(u1.id);
+u1.id = 12;
+console.log(u1.id);
+console.log(u1.isActive);
+u1.deactivate();
+console.log(u1.isActive);
